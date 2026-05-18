@@ -95,9 +95,90 @@
       window.location.href = 'index.html';
     }
 
-    window.addEventListener('load', () => {
+    let currentUser = null;
+
+    async function loadProfileData() {
+      if (!currentUser) return;
+
+      const { data, error } = await supabaseClient
+        .from('user_profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      document.getElementById('display-name-input').value = data.display_name || '';
+      document.getElementById('organization-input').value = data.organization || '';
+    }
+
+    async function saveAccountSettings() {
+      if (!currentUser) return;
+
+      const displayName = document.getElementById('display-name-input').value;
+      const organization = document.getElementById('organization-input').value;
+
+      const { error } = await supabaseClient
+        .from('user_profiles')
+        .update({
+          display_name: displayName,
+          organization: organization
+        })
+        .eq('id', currentUser.id);
+
+      const status = document.getElementById('account-save-status');
+
+      if (error) {
+        status.innerText = 'Failed to save settings';
+        console.error(error);
+        return;
+      }
+
+      status.innerText = 'Settings saved successfully';
+    }
+
+    async function createApiKey() {
+      if (!currentUser) return;
+
+      const key = crypto.randomUUID();
+
+      const { error } = await supabaseClient
+        .from('developer_api_keys')
+        .insert({
+          user_id: currentUser.id,
+          api_key: key,
+          key_name: 'Generated API Key'
+        });
+
+      const output = document.getElementById('api-key-output');
+
+      if (error) {
+        output.innerText = 'Failed to generate API key';
+        console.error(error);
+        return;
+      }
+
+      output.innerText = key;
+    }
+
+    window.addEventListener('load', async () => {
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      currentUser = user;
+
       loadSession();
       switchPage('account-page');
+      loadProfileData();
     });
   </script>
 
@@ -244,15 +325,27 @@
 
         <div>
           <label class="block text-sm text-purple-300 mb-2">Display Name</label>
-          <input class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" value="Ari" />
+          <input id="display-name-input" class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" />
         </div>
 
         <div>
           <label class="block text-sm text-purple-300 mb-2">Organization</label>
-          <input class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" value="Plum Ecosystem" />
+          <input id="organization-input" class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" />
         </div>
 
       </div>
+
+      <div class="mt-8 flex items-center gap-4">
+        <button
+          onclick="saveAccountSettings()"
+          class="px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl hover:scale-[1.02] transition-all"
+        >
+          Save Account Settings
+        </button>
+
+        <p id="account-save-status" class="text-purple-200"></p>
+      </div>
+
     </div>
   </div>
 
@@ -389,9 +482,16 @@
           <h3 class="text-xl font-bold">API Access</h3>
           <p class="text-purple-200 mt-2">Generate ecosystem API tokens for integrations.</p>
 
-          <button class="mt-5 px-5 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl">
+          <button onclick="createApiKey()" class="mt-5 px-5 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl">
             Generate API Key
           </button>
+
+          <div class="mt-5 bg-black/20 border border-white/10 rounded-2xl p-4">
+            <p class="text-sm text-purple-300 mb-2">Generated Key</p>
+            <p id="api-key-output" class="break-all font-mono text-sm text-pink-300">
+              No API key generated yet.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -401,6 +501,33 @@
 ```
 
   </main>
+
+  <!--
+
+  =========================================
+  SUPABASE SQL FOR API KEYS TABLE
+  =========================================
+
+  create table public.developer_api_keys (
+    id bigint generated always as identity primary key,
+
+    user_id uuid references auth.users(id) on delete cascade,
+
+    key_name text,
+
+    api_key text,
+
+    created_at timestamptz default now()
+  );
+
+  alter table public.developer_api_keys enable row level security;
+
+  create policy "Users can manage own api keys"
+  on public.developer_api_keys
+  for all
+  using (auth.uid() = user_id);
+
+  -->
 
 </body>
 </html>
