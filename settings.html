@@ -14,24 +14,13 @@
     body {
       font-family: Inter, sans-serif;
     }
-
-    .settings-page {
-      display: none;
-    }
-
-    .settings-page.active {
-      display: block;
-    }
-
-    .sidebar-item.active {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.15);
-    }
   </style>
 
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-[#12051f] via-[#24053a] to-[#3f0a5a] text-white overflow-hidden">
+<body class="min-h-screen bg-gradient-to-br from-[#12051f] via-[#24053a] to-[#3f0a5a] text-white overflow-x-hidden">
+
+  <!-- BACKGROUND -->
 
   <div class="fixed inset-0 overflow-hidden pointer-events-none opacity-30">
     <div class="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full blur-3xl"></div>
@@ -39,9 +28,9 @@
   </div>
 
   <script>
-    // ======================================
-    // SUPABASE
-    // ======================================
+    // =====================================
+    // SUPABASE CONFIG
+    // =====================================
 
     const SUPABASE_URL = 'https://jihpgbsghatuwwkacsur.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppaHBnYnNnaGF0dXd3a2Fjc3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzkxNzcsImV4cCI6MjA5MzcxNTE3N30.qH7iso7t2zoOLi0C68DiUKZecyIDhlxVcJAcNhYLHTk';
@@ -54,14 +43,43 @@
     let currentUser = null;
 
 
-    // ======================================
-    // AUTH + SESSION
-    // ======================================
+    // =====================================
+    // SERVICE DEFINITIONS
+    // EASY COPY + PASTE FORMAT
+    // =====================================
 
-    async function initializePortal() {
+    const SERVICES = [
+      {
+        name: 'MagicByte ICT Cloud',
+        icon: '☁️',
+        url: 'https://ict.magicplum.co.uk'
+      },
+      {
+        name: 'UK Television Clips',
+        icon: '📺',
+        url: 'https://uktvc.magicplum.co.uk'
+      },
+      {
+        name: 'United Broadcasting Company',
+        icon: '🏢',
+        url: 'https://ubc.anarchygroup.uk'
+      },
+      {
+        name: 'Plum Courses',
+        icon: '📚',
+        url: 'https://academy.magicplum.co.uk/courses'
+      }
+    ];
+
+
+    // =====================================
+    // INITIALIZE
+    // =====================================
+
+    async function initializeSettings() {
       const {
         data: { user },
-        error,
+        error
       } = await supabaseClient.auth.getUser();
 
       if (error || !user) {
@@ -73,17 +91,15 @@
 
       document.getElementById('user-email').innerText = user.email;
 
-      switchPage('account-page');
-
       await ensureProfileExists();
       await loadProfile();
-      await loadApiKeys();
+      await loadServices();
     }
 
 
-    // ======================================
+    // =====================================
     // ENSURE PROFILE EXISTS
-    // ======================================
+    // =====================================
 
     async function ensureProfileExists() {
       const { data } = await supabaseClient
@@ -97,19 +113,16 @@
           .from('user_profiles')
           .insert({
             id: currentUser.id,
-            display_name: currentUser.user_metadata?.display_name || 'User',
-            organization: 'Plum Ecosystem',
-            security_status: 'Protected',
-            two_factor_enabled: true,
-            authorized_devices: 1
+            display_name: currentUser.email.split('@')[0],
+            mfa_enabled: true
           });
       }
     }
 
 
-    // ======================================
-    // LOAD PROFILE
-    // ======================================
+    // =====================================
+    // PROFILE LOADING
+    // =====================================
 
     async function loadProfile() {
       const { data, error } = await supabaseClient
@@ -119,614 +132,169 @@
         .single();
 
       if (error) {
-        console.error('Profile load error:', error);
+        console.error(error);
         return;
       }
 
-      document.getElementById('display-name-input').value = data.display_name || '';
-      document.getElementById('organization-input').value = data.organization || '';
+      document.getElementById('display-name').value = data.display_name || '';
 
-      document.getElementById('two-factor-toggle').checked = data.two_factor_enabled || false;
-
-      document.getElementById('security-status-text').innerText = data.security_status || 'Protected';
-
-      document.getElementById('authorized-devices-text').innerText = `${data.authorized_devices || 1} Devices`;
+      document.getElementById('mfa-toggle').checked = data.mfa_enabled ?? true;
     }
 
 
-    // ======================================
+    // =====================================
     // SAVE PROFILE
-    // ======================================
+    // =====================================
 
-async function saveProfile() {
-  const status = document.getElementById('account-save-status');
+    async function saveProfile() {
+      const status = document.getElementById('profile-status');
 
-  status.innerText = 'Saving...';
-
-  const updates = {
-    id: currentUser.id,
-
-    display_name:
-      document.getElementById('display-name-input').value,
-
-    organization:
-      document.getElementById('organization-input').value,
-
-    two_factor_enabled:
-      document.getElementById('two-factor-toggle').checked,
-
-    updated_at: new Date().toISOString()
-  };
-
-  const { error } = await supabaseClient
-    .from('user_profiles')
-    .upsert(updates);
-
-  if (error) {
-    console.error(error);
-
-    status.innerText =
-      'Failed to save settings';
-
-    return;
-  }
-
-  status.innerText =
-    'Settings saved successfully';
-
-  await loadProfile();
-}
-
-
-
-    // ======================================
-    // API KEYS
-    // ======================================
-
-    async function createApiKey() {
-      const output = document.getElementById('api-key-status');
-
-      output.innerText = 'Generating API key...';
-
-      const apiKey = crypto.randomUUID() + '-' + crypto.randomUUID();
-
-      const { error } = await supabaseClient
-        .from('developer_api_keys')
-        .insert({
-          user_id: currentUser.id,
-          key_name: 'API Key',
-          api_key: apiKey
-        });
-
-      if (error) {
-        console.error(error);
-        output.innerText = 'Failed to create API key';
-        return;
-      }
-
-      output.innerText = 'API key generated successfully';
-
-      await loadApiKeys();
-    }
-
-
-    async function loadApiKeys() {
-      const container = document.getElementById('api-keys-container');
-
-      const { data, error } = await supabaseClient
-        .from('developer_api_keys')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      container.innerHTML = '';
-
-      if (data.length === 0) {
-        container.innerHTML = `
-          <div class="bg-black/20 rounded-2xl p-5 border border-white/10">
-            No API keys created yet.
-          </div>
-        `;
-
-        return;
-      }
-
-      data.forEach(key => {
-        const item = document.createElement('div');
-
-        item.className = 'bg-black/20 rounded-2xl p-5 border border-white/10';
-
-        item.innerHTML = `
-          <div class="flex items-center justify-between gap-5 flex-wrap">
-            <div>
-              <h3 class="font-bold text-lg">${key.key_name}</h3>
-              <p class="font-mono text-sm text-pink-300 mt-2 break-all">
-                ${key.api_key}
-              </p>
-            </div>
-
-            <button
-              onclick="deleteApiKey(${key.id})"
-              class="px-5 py-3 rounded-2xl bg-red-500/20 border border-red-400/20 hover:bg-red-500/30 transition-all"
-            >
-              Delete
-            </button>
-          </div>
-        `;
-
-        container.appendChild(item);
-      });
-    }
-
-
-    async function deleteApiKey(id) {
-      await supabaseClient
-        .from('developer_api_keys')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', currentUser.id);
-
-      await loadApiKeys();
-    }
-
-
-    // ======================================
-    // NAVIGATION
-    // ======================================
-
-    function switchPage(pageId) {
-      document.querySelectorAll('.settings-page').forEach(page => {
-        page.classList.remove('active');
-      });
-
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.classList.remove('active');
-      });
-
-      document.getElementById(pageId).classList.add('active');
-
-      document
-        .querySelector(`[data-page="${pageId}"]`)
-        .classList.add('active');
-    }
-
-
-    // ======================================
-    // SEARCH
-    // ======================================
-
-    function searchSettings() {
-      const query = document
-        .getElementById('settings-search')
-        .value
-        .toLowerCase();
-
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        const text = item.innerText.toLowerCase();
-
-        item.style.display = text.includes(query)
-          ? 'flex'
-          : 'none';
-      });
-    }
-
-
-    // ======================================
-    // SIGN OUT
-    // ======================================
-
-    async function signOut() {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'index.html';
-    }
-
-
-    // ======================================
-    // START
-    // ======================================
-
-    window.addEventListener('load', initializePortal);
-  </script>
-
-  <header class="relative z-20 border-b border-white/10 bg-black/20 backdrop-blur-xl">
-    <div class="max-w-full px-6 py-5 flex items-center justify-between">
-
-```
-  <div class="flex items-center gap-4">
-    <div class="w-14 h-14 rounded-3xl bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center text-2xl font-black shadow-2xl">
-      P
-    </div>
-
-    <div>
-      <h1 class="text-2xl font-black">Plum Identity Settings</h1>
-      <p class="text-sm text-purple-200">Manage your ecosystem preferences</p>
-    </div>
-  </div>
-
-  <div class="flex items-center gap-4">
-    <div class="hidden md:block text-right">
-      <p class="text-xs uppercase tracking-wider text-purple-300">Signed In As</p>
-      <p id="user-email" class="font-bold"></p>
-    </div>
-
-    <a href="portal.html">
-      <button class="px-5 py-3 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 transition-all">
-        Back To Portal
-      </button>
-    </a>
-
-    <button
-      onclick="signOut()"
-      class="px-5 py-3 rounded-2xl bg-red-500/20 border border-red-400/20 hover:bg-red-500/30 transition-all"
-    >
-      Sign Out
-    </button>
-  </div>
-</div>
-```
-
-  </header>
-
-  <main class="relative z-10 flex h-[calc(100vh-96px)]">
-
-```
-<aside class="w-[320px] border-r border-white/10 bg-black/20 backdrop-blur-xl overflow-y-auto p-5">
-
-  <div class="mb-6">
-    <input
-      id="settings-search"
-      oninput="searchSettings()"
-      type="text"
-      placeholder="Search settings..."
-      class="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/10 placeholder:text-purple-300 outline-none"
-    />
-  </div>
-
-  <div class="space-y-3">
-
-    <button data-page="account-page" onclick="switchPage('account-page')" class="sidebar-item active w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all">
-      👤 Account
-    </button>
-
-    <button data-page="security-page" onclick="switchPage('security-page')" class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all">
-      🔐 Security
-    </button>
-
-    <button data-page="developer-page" onclick="switchPage('developer-page')" class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all">
-      ⚡ Developer
-    </button>
-
-  </div>
-
-</aside>
-
-<section class="flex-1 overflow-y-auto p-8">
-
-  <div id="account-page" class="settings-page active">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-
-      <h2 class="text-4xl font-black">Account Settings</h2>
-      <p class="text-purple-200 mt-3">
-        Manage your profile and ecosystem preferences.
-      </p>
-
-      <div class="grid md:grid-cols-2 gap-6 mt-8">
-
-        <div>
-          <label class="block text-sm text-purple-300 mb-2">
-            Display Name
-          </label>
-
-          <input
-            id="display-name-input"
-            class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm text-purple-300 mb-2">
-            Organization
-          </label>
-
-          <input
-            id="organization-input"
-            class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none"
-          />
-        </div>
-
-      </div>
-
-      <div class="mt-8 bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-        <div>
-          <h3 class="font-bold text-xl">Two Factor Authentication</h3>
-          <p class="text-purple-200 text-sm mt-1">
-            Protect your account with additional authentication.
-          </p>
-        </div>
-
-        <input
-          id="two-factor-toggle"
-          type="checkbox"
-          class="w-6 h-6"
-        />
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-6 mt-6">
-
-        <div class="bg-black/20 rounded-2xl p-5 border border-white/10">
-          <p class="text-purple-300 text-sm">Security Status</p>
-          <h3 id="security-status-text" class="text-2xl font-black mt-2 text-green-300">
-            Loading...
-          </h3>
-        </div>
-
-        <div class="bg-black/20 rounded-2xl p-5 border border-white/10">
-          <p class="text-purple-300 text-sm">Authorized Devices</p>
-          <h3 id="authorized-devices-text" class="text-2xl font-black mt-2">
-            Loading...
-          </h3>
-        </div>
-
-      </div>
-
-      <div class="mt-8 flex items-center gap-4 flex-wrap">
-        <button
-          onclick="saveProfile()"
-          class="px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl hover:scale-[1.02] transition-all"
-        >
-          Save Settings
-        </button>
-
-        <p id="account-save-status" class="text-purple-200"></p>
-      </div>
-
-    </div>
-  </div>
-
-
-  <div id="security-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Security Settings</h2>
-
-      <div class="space-y-5 mt-8">
-
-        <div class="bg-black/20 rounded-2xl p-5 border border-white/10">
-          <h3 class="font-bold text-xl">Portal Protection</h3>
-
-          <p class="text-purple-200 mt-3 leading-relaxed">
-            Your Plum Identity account uses Supabase authentication, row level security policies, and protected user sessions.
-          </p>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-
-  <div id="developer-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-
-      <h2 class="text-4xl font-black">Developer Settings</h2>
-
-      <p class="text-purple-200 mt-3">
-        Manage API keys and developer integrations.
-      </p>
-
-      <div class="mt-8">
-        <button
-          onclick="createApiKey()"
-          class="px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl hover:scale-[1.02] transition-all"
-        >
-          Generate API Key
-        </button>
-
-        <p id="api-key-status" class="text-purple-200 mt-4"></p>
-      </div>
-
-      <div id="api-keys-container" class="space-y-4 mt-8">
-      </div>
-
-    </div>
-  </div>
-
-</section>
-```
-
-  </main>
-
-</body>
-</html>
-<!DOCTYPE html>
-
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Plum Identity Settings</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    body {
-      font-family: Inter, sans-serif;
-    }
-
-    .settings-page {
-      display: none;
-    }
-
-    .settings-page.active {
-      display: block;
-    }
-
-    .sidebar-item.active {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.15);
-    }
-  </style>
-
-</head>
-
-<body class="min-h-screen bg-gradient-to-br from-[#12051f] via-[#24053a] to-[#3f0a5a] text-white overflow-hidden">
-
-  <div class="fixed inset-0 overflow-hidden pointer-events-none opacity-30">
-    <div class="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-purple-500 rounded-full blur-3xl"></div>
-  </div>
-
-  <script>
-    const SUPABASE_URL = 'https://jihpgbsghatuwwkacsur.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppaHBnYnNnaGF0dXd3a2Fjc3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzkxNzcsImV4cCI6MjA5MzcxNTE3N30.qH7iso7t2zoOLi0C68DiUKZecyIDhlxVcJAcNhYLHTk';
-
-    const supabaseClient = supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY
-    );
-
-    async function loadSession() {
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
-
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
-      }
-
-      document.getElementById('user-email').innerText = user.email;
-    }
-
-    function switchPage(pageId) {
-      document.querySelectorAll('.settings-page').forEach(page => {
-        page.classList.remove('active');
-      });
-
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.classList.remove('active');
-      });
-
-      document.getElementById(pageId).classList.add('active');
-      document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
-    }
-
-    function searchSettings() {
-      const query = document
-        .getElementById('settings-search')
-        .value
-        .toLowerCase();
-
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        const text = item.innerText.toLowerCase();
-
-        if (text.includes(query)) {
-          item.style.display = 'flex';
-        } else {
-          item.style.display = 'none';
-        }
-      });
-    }
-
-    async function signOut() {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'index.html';
-    }
-
-    let currentUser = null;
-
-    async function loadProfileData() {
-      if (!currentUser) return;
-
-      const { data, error } = await supabaseClient
-        .from('user_profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      document.getElementById('display-name-input').value = data.display_name || '';
-      document.getElementById('organization-input').value = data.organization || '';
-    }
-
-    async function saveAccountSettings() {
-      if (!currentUser) return;
-
-      const displayName = document.getElementById('display-name-input').value;
-      const organization = document.getElementById('organization-input').value;
+      status.innerText = 'Saving settings...';
 
       const { error } = await supabaseClient
         .from('user_profiles')
         .update({
-          display_name: displayName,
-          organization: organization
+          display_name: document.getElementById('display-name').value,
+          mfa_enabled: document.getElementById('mfa-toggle').checked
         })
         .eq('id', currentUser.id);
 
-      const status = document.getElementById('account-save-status');
-
       if (error) {
-        status.innerText = 'Failed to save settings';
         console.error(error);
+        status.innerText = 'Failed to save settings';
         return;
       }
 
       status.innerText = 'Settings saved successfully';
     }
 
-    async function createApiKey() {
-      if (!currentUser) return;
 
-      const key = crypto.randomUUID();
+    // =====================================
+    // LOAD SERVICES
+    // =====================================
 
-      const { error } = await supabaseClient
-        .from('developer_api_keys')
-        .insert({
-          user_id: currentUser.id,
-          api_key: key,
-          key_name: 'Generated API Key'
-        });
+    async function loadServices() {
+      const container = document.getElementById('services-container');
 
-      const output = document.getElementById('api-key-output');
+      container.innerHTML = '';
+
+      const { data, error } = await supabaseClient
+        .from('user_services')
+        .select('*')
+        .eq('user_id', currentUser.id);
 
       if (error) {
-        output.innerText = 'Failed to generate API key';
         console.error(error);
         return;
       }
 
-      output.innerText = key;
+      SERVICES.forEach(service => {
+        const enabled = data.some(s => s.service_name === service.name && s.enabled === true);
+
+        const card = document.createElement('div');
+
+        card.className = 'bg-black/20 border border-white/10 rounded-3xl p-6';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-5">
+
+            <div>
+              <div class="text-4xl mb-4">${service.icon}</div>
+
+              <h3 class="text-2xl font-black leading-tight">
+                ${service.name}
+              </h3>
+
+              <p class="text-purple-200 mt-3 text-sm leading-relaxed">
+                Enable access to ${service.name} through Plum Identity.
+              </p>
+            </div>
+
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                class="sr-only peer"
+                ${enabled ? 'checked' : ''}
+                onchange="toggleService('${service.name}', '${service.icon}', '${service.url}', this.checked)"
+              >
+
+              <div class="w-14 h-8 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:bg-pink-500 transition-all"></div>
+
+              <div class="absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-all peer-checked:translate-x-6"></div>
+            </label>
+
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
     }
 
-    window.addEventListener('load', async () => {
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
 
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
+    // =====================================
+    // TOGGLE SERVICES
+    // =====================================
+
+    async function toggleService(name, icon, url, enabled) {
+      const status = document.getElementById('services-status');
+
+      status.innerText = 'Updating services...';
+
+      if (enabled) {
+        const { error } = await supabaseClient
+          .from('user_services')
+          .upsert({
+            user_id: currentUser.id,
+            service_name: name,
+            service_icon: icon,
+            service_url: url,
+            enabled: true
+          });
+
+        if (error) {
+          console.error(error);
+          status.innerText = 'Failed to enable service';
+          return;
+        }
+      } else {
+        const { error } = await supabaseClient
+          .from('user_services')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('service_name', name);
+
+        if (error) {
+          console.error(error);
+          status.innerText = 'Failed to disable service';
+          return;
+        }
       }
 
-      currentUser = user;
+      status.innerText = 'Services updated successfully';
+    }
 
-      loadSession();
-      switchPage('account-page');
-      loadProfileData();
-    });
+
+    // =====================================
+    // SIGN OUT
+    // =====================================
+
+    async function signOut() {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+
+    // =====================================
+    // START APP
+    // =====================================
+
+    window.addEventListener('load', initializeSettings);
   </script>
 
+  <!-- HEADER -->
+
   <header class="relative z-20 border-b border-white/10 bg-black/20 backdrop-blur-xl">
-    <div class="max-w-full px-6 py-5 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
 
 ```
   <div class="flex items-center gap-4">
@@ -737,12 +305,12 @@ async function saveProfile() {
     <div>
       <h1 class="text-2xl font-black">Plum Identity Settings</h1>
       <p class="text-sm text-purple-200">
-        Manage your ecosystem preferences
+        Core ecosystem preferences
       </p>
     </div>
   </div>
 
-  <div class="flex items-center gap-5">
+  <div class="flex items-center gap-4">
 
     <div class="hidden md:block text-right">
       <p class="text-xs uppercase tracking-wider text-purple-300">
@@ -772,305 +340,106 @@ async function saveProfile() {
 
   </header>
 
-  <main class="relative z-10 flex h-[calc(100vh-96px)]">
+  <!-- MAIN -->
+
+  <main class="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-10">
 
 ```
-<aside class="w-[320px] border-r border-white/10 bg-black/20 backdrop-blur-xl overflow-y-auto p-5">
+<!-- ACCOUNT SETTINGS -->
+<section class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
 
-  <div class="mb-6">
-    <input
-      id="settings-search"
-      oninput="searchSettings()"
-      type="text"
-      placeholder="Search settings..."
-      class="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/10 placeholder:text-purple-300 outline-none"
-    />
-  </div>
+  <h2 class="text-4xl font-black">
+    Account Settings
+  </h2>
 
-  <div class="space-y-3">
+  <p class="text-purple-200 mt-3">
+    Manage your display name and security preferences.
+  </p>
 
-    <button
-      data-page="account-page"
-      onclick="switchPage('account-page')"
-      class="sidebar-item active w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      👤 Account
-    </button>
+  <div class="grid md:grid-cols-2 gap-8 mt-10">
 
-    <button
-      data-page="security-page"
-      onclick="switchPage('security-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      🔐 Security
-    </button>
+    <div>
+      <label class="block text-sm text-purple-300 mb-3">
+        Display Name
+      </label>
 
-    <button
-      data-page="sessions-page"
-      onclick="switchPage('sessions-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      💻 Sessions & Devices
-    </button>
+      <input
+        id="display-name"
+        type="text"
+        placeholder="Display Name"
+        class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none"
+      />
+    </div>
 
-    <button
-      data-page="notifications-page"
-      onclick="switchPage('notifications-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      🔔 Notifications
-    </button>
+    <div class="bg-black/20 border border-white/10 rounded-3xl p-6 flex items-center justify-between">
 
-    <button
-      data-page="services-page"
-      onclick="switchPage('services-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      🌐 Connected Services
-    </button>
+      <div>
+        <h3 class="text-2xl font-black">
+          Multi-Factor Authentication
+        </h3>
 
-    <button
-      data-page="appearance-page"
-      onclick="switchPage('appearance-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      🎨 Appearance
-    </button>
-
-    <button
-      data-page="privacy-page"
-      onclick="switchPage('privacy-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      🛡️ Privacy
-    </button>
-
-    <button
-      data-page="developer-page"
-      onclick="switchPage('developer-page')"
-      class="sidebar-item w-full flex items-center gap-4 text-left px-5 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-    >
-      ⚡ Developer
-    </button>
-
-  </div>
-
-</aside>
-
-<section class="flex-1 overflow-y-auto p-8">
-
-  <div id="account-page" class="settings-page active">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Account Settings</h2>
-      <p class="text-purple-200 mt-3">Manage your account information and profile details.</p>
-
-      <div class="grid md:grid-cols-2 gap-6 mt-8">
-
-        <div>
-          <label class="block text-sm text-purple-300 mb-2">Display Name</label>
-          <input id="display-name-input" class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" />
-        </div>
-
-        <div>
-          <label class="block text-sm text-purple-300 mb-2">Organization</label>
-          <input id="organization-input" class="w-full px-5 py-4 rounded-2xl bg-black/20 border border-white/10 outline-none" />
-        </div>
-
+        <p class="text-purple-200 mt-2 text-sm leading-relaxed">
+          Additional account protection enabled by default.
+        </p>
       </div>
 
-      <div class="mt-8 flex items-center gap-4">
-        <button
-          onclick="saveAccountSettings()"
-          class="px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl hover:scale-[1.02] transition-all"
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input
+          id="mfa-toggle"
+          type="checkbox"
+          class="sr-only peer"
         >
-          Save Account Settings
-        </button>
 
-        <p id="account-save-status" class="text-purple-200"></p>
-      </div>
+        <div class="w-14 h-8 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:bg-pink-500 transition-all"></div>
+
+        <div class="absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-all peer-checked:translate-x-6"></div>
+      </label>
 
     </div>
+
   </div>
 
-  <div id="security-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Security Settings</h2>
-      <p class="text-purple-200 mt-3">Manage passwords, 2FA, and authentication methods.</p>
+  <div class="mt-10 flex items-center gap-5 flex-wrap">
 
-      <div class="space-y-5 mt-8">
+    <button
+      onclick="saveProfile()"
+      class="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-2xl hover:scale-[1.02] transition-all"
+    >
+      Save Account Settings
+    </button>
 
-        <div class="bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-          <div>
-            <h3 class="font-bold text-xl">Two Factor Authentication</h3>
-            <p class="text-purple-200 text-sm mt-1">Protect your account with additional authentication.</p>
-          </div>
+    <p id="profile-status" class="text-purple-200"></p>
 
-          <button class="px-5 py-3 rounded-2xl bg-green-500/20 border border-green-400/20">
-            Enabled
-          </button>
-        </div>
-
-      </div>
-    </div>
   </div>
 
-  <div id="sessions-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Sessions & Devices</h2>
-      <p class="text-purple-200 mt-3">Review devices and active portal sessions.</p>
+</section>
 
-      <div class="space-y-4 mt-8">
 
-        <div class="bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-          <div>
-            <h3 class="font-bold">Chrome on Windows</h3>
-            <p class="text-purple-200 text-sm">Manchester, United Kingdom</p>
-          </div>
+<!-- SERVICES -->
+<section class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
 
-          <span class="text-green-300 font-bold">Current Session</span>
-        </div>
+  <h2 class="text-4xl font-black">
+    Services
+  </h2>
 
-      </div>
-    </div>
+  <p class="text-purple-200 mt-3">
+    Enable and disable connected ecosystem services.
+  </p>
+
+  <div
+    id="services-container"
+    class="grid md:grid-cols-2 gap-8 mt-10"
+  >
   </div>
 
-  <div id="notifications-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Notification Preferences</h2>
-      <p class="text-purple-200 mt-3">Control alerts and account notifications.</p>
-
-      <div class="space-y-5 mt-8">
-        <div class="bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-          <span>Email Notifications</span>
-          <input type="checkbox" checked class="w-6 h-6" />
-        </div>
-
-        <div class="bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-          <span>Security Alerts</span>
-          <input type="checkbox" checked class="w-6 h-6" />
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="services-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Connected Services</h2>
-      <p class="text-purple-200 mt-3">Manage integrations and ecosystem services.</p>
-
-      <div class="grid md:grid-cols-2 gap-6 mt-8">
-
-        <div class="bg-black/20 rounded-2xl p-6 border border-white/10">
-          <h3 class="text-2xl font-bold">Plum Cloud</h3>
-          <p class="text-purple-200 mt-3">Connected and authorized.</p>
-        </div>
-
-        <div class="bg-black/20 rounded-2xl p-6 border border-white/10">
-          <h3 class="text-2xl font-bold">Femboy Media</h3>
-          <p class="text-purple-200 mt-3">Connected and authorized.</p>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <div id="appearance-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Appearance</h2>
-      <p class="text-purple-200 mt-3">Customize portal themes and interface appearance.</p>
-
-      <div class="grid md:grid-cols-3 gap-6 mt-8">
-
-        <div class="bg-gradient-to-br from-pink-500 to-purple-600 rounded-3xl p-8 border border-white/10">
-          <h3 class="text-2xl font-bold">Plum Default</h3>
-        </div>
-
-        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl p-8 border border-white/10">
-          <h3 class="text-2xl font-bold">Ocean</h3>
-        </div>
-
-        <div class="bg-gradient-to-br from-gray-700 to-black rounded-3xl p-8 border border-white/10">
-          <h3 class="text-2xl font-bold">Midnight</h3>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <div id="privacy-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Privacy Controls</h2>
-      <p class="text-purple-200 mt-3">Manage account visibility and data permissions.</p>
-
-      <div class="space-y-5 mt-8">
-        <div class="bg-black/20 rounded-2xl p-5 flex items-center justify-between">
-          <span>Profile Visibility</span>
-          <select class="px-4 py-3 rounded-2xl bg-black/30 border border-white/10">
-            <option>Private</option>
-            <option>Organization Only</option>
-            <option>Public</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="developer-page" class="settings-page">
-    <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-xl shadow-2xl">
-      <h2 class="text-4xl font-black">Developer Settings</h2>
-      <p class="text-purple-200 mt-3">Manage API keys, integrations, and developer tools.</p>
-
-      <div class="space-y-5 mt-8">
-        <div class="bg-black/20 rounded-2xl p-5">
-          <h3 class="text-xl font-bold">API Access</h3>
-          <p class="text-purple-200 mt-2">Generate ecosystem API tokens for integrations.</p>
-
-          <button onclick="createApiKey()" class="mt-5 px-5 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-xl">
-            Generate API Key
-          </button>
-
-          <div class="mt-5 bg-black/20 border border-white/10 rounded-2xl p-4">
-            <p class="text-sm text-purple-300 mb-2">Generated Key</p>
-            <p id="api-key-output" class="break-all font-mono text-sm text-pink-300">
-              No API key generated yet.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="mt-8">
+    <p id="services-status" class="text-purple-200"></p>
   </div>
 
 </section>
 ```
 
   </main>
-
-  <!--
-
-  =========================================
-  SUPABASE SQL FOR API KEYS TABLE
-  =========================================
-
-  create table public.developer_api_keys (
-    id bigint generated always as identity primary key,
-
-    user_id uuid references auth.users(id) on delete cascade,
-
-    key_name text,
-
-    api_key text,
-
-    created_at timestamptz default now()
-  );
-
-  alter table public.developer_api_keys enable row level security;
-
-  create policy "Users can manage own api keys"
-  on public.developer_api_keys
-  for all
-  using (auth.uid() = user_id);
-
-  -->
 
 </body>
 </html>
