@@ -235,43 +235,59 @@
     // TOGGLE SERVICES
     // =====================================
 
-    async function toggleService(name, icon, url, enabled) {
-      const status = document.getElementById('services-status');
+async function toggleService(name, icon, url, enabled) {
+  const status =
+    document.getElementById('services-status');
 
-      status.innerText = 'Updating services...';
+  status.innerText = 'Updating services...';
 
-      if (enabled) {
-        const { error } = await supabaseClient
-          .from('user_services')
-          .upsert({
-            user_id: currentUser.id,
-            service_name: name,
-            service_icon: icon,
-            service_url: url,
-            enabled: true
-          });
+  if (enabled) {
 
-        if (error) {
-          console.error(error);
-          status.innerText = 'Failed to enable service';
-          return;
+    const { error } = await supabaseClient
+      .from('user_services')
+      .upsert(
+        {
+          user_id: currentUser.id,
+          service_name: name,
+          service_icon: icon,
+          service_url: url,
+          enabled: true
+        },
+        {
+          onConflict: 'user_id,service_name'
         }
-      } else {
-        const { error } = await supabaseClient
-          .from('user_services')
-          .delete()
-          .eq('user_id', currentUser.id)
-          .eq('service_name', name);
+      );
 
-        if (error) {
-          console.error(error);
-          status.innerText = 'Failed to disable service';
-          return;
-        }
-      }
+    if (error) {
+      console.error(error);
 
-      status.innerText = 'Services updated successfully';
+      status.innerText =
+        'Failed to enable service';
+
+      return;
     }
+
+  } else {
+
+    const { error } = await supabaseClient
+      .from('user_services')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('service_name', name);
+
+    if (error) {
+      console.error(error);
+
+      status.innerText =
+        'Failed to disable service';
+
+      return;
+    }
+  }
+
+  status.innerText =
+    'Services updated successfully';
+}
 
 
     // =====================================
