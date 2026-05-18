@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plum Identity</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<script>
+    const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function signIn() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const status = document.getElementById('login-status');
+
+      status.innerText = 'Signing in...';
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        status.innerText = error.message;
+        return;
+      }
+
+      status.innerText = 'Login successful. Redirecting...';
+
+      setTimeout(() => {
+        window.location.href = 'portal.html';
+      }, 1000);
+    }
+  </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-[#12051f] via-[#24053a] to-[#3f0a5a] text-white overflow-x-hidden">
+
+  <div class="absolute inset-0 opacity-20 pointer-events-none overflow-hidden">
+    <div class="absolute top-20 left-20 w-72 h-72 bg-pink-500 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-purple-500 rounded-full blur-3xl"></div>
+  </div>
+
+  <header class="relative z-10 flex items-center justify-between px-8 py-6 border-b border-white/10 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-2xl font-black shadow-2xl">
+        P
+      </div>
+
+      <div>
+        <h1 class="text-2xl font-black tracking-tight">Plum Identity</h1>
+        <p class="text-sm text-purple-200">Unified access across the Plum ecosystem</p>
+      </div>
+    </div>
+
+    <nav class="hidden md:flex gap-8 text-sm text-purple-100">
+      <a href="#features" class="hover:text-pink-300 transition">Features</a>
+      <a href="#about" class="hover:text-pink-300 transition">About</a>
+      <a href="#contact" class="hover:text-pink-300 transition">Contact</a>
+    </nav>
+  </header>
+
+  <main class="relative z-10 px-8 py-20 max-w-7xl mx-auto">
+
+    <section class="grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2 bg-white/10 border border-white/10 rounded-full px-4 py-2 text-sm mb-6 backdrop-blur-md">
+          ✨ Identity Reimagined
+        </div>
+
+        <h2 class="text-6xl md:text-7xl font-black leading-none tracking-tight">
+          Access your entire ecosystem.
+          </span>
+        </h2>
+
+        <p class="mt-8 text-lg text-purple-100 leading-relaxed max-w-xl">
+          Plum Identity is a centralized logon portal for accessing account details, authorized applications, software, cloud tools, and services across the Plum, Femboy, Prism, and UBC ecosystem.
+        </p>
+
+        <div class="mt-10 bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md max-w-md">
+          <h3 class="text-2xl font-bold mb-4">Portal Sign In</h3>
+
+          <div class="space-y-4">
+            <input
+              id="email"
+              type="email"
+              placeholder="Email address"
+              class="w-full px-4 py-4 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-purple-300 outline-none"
+            />
+
+            <input
+              id="password"
+              type="password"
+              placeholder="Password"
+              class="w-full px-4 py-4 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-purple-300 outline-none"
+            />
+
+            <button
+              onclick="signIn()"
+              class="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold hover:scale-[1.02] transition-transform shadow-2xl"
+            >
+              Continue to Plum Identity
+            </button>
+
+            <p id="login-status" class="text-sm text-purple-200"></p>
+
+            <p class="text-xs text-purple-300 leading-relaxed">
+              After authentication you will automatically be redirected to the Plum Identity portal dashboard.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-10 flex flex-wrap gap-4">
+          <button class="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold shadow-2xl hover:scale-105 transition-transform">
+            Get Started
+          </button>
+
+          <button class="px-8 py-4 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 transition">
+            Learn More
+          </button>
+        </div>
+
+        <div class="mt-12 grid grid-cols-3 gap-6 max-w-lg">
+          <div>
+            <h3 class="text-3xl font-black">10K+</h3>
+            <p class="text-purple-200 text-sm">Connected platforms</p>
+          </div>
+
+          <div>
+            <h3 class="text-3xl font-black">99.9%</h3>
+            <p class="text-purple-200 text-sm">Secure uptime</p>
+          </div>
+
+          <div>
+            <h3 class="text-3xl font-black">24/7</h3>
+            <p class="text-purple-200 text-sm">Unified authentication</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="bg-white/10 border border-white/10 rounded-[2rem] p-6 backdrop-blur-2xl shadow-2xl">
+          <div class="bg-gradient-to-br from-[#2b0b45] to-[#13061f] rounded-[1.5rem] p-6 border border-white/10">
+
+            <div class="flex items-center gap-4 mb-8">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-400 to-purple-500"></div>
+
+              <div>
+                <h3 class="text-2xl font-bold">@plumuser</h3>
+                <p class="text-purple-200">Unified ecosystem account</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <p class="text-sm text-purple-200 mb-2">Verified Identity</p>
+
+                <div class="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div class="w-[92%] h-full bg-gradient-to-r from-pink-400 to-purple-500 rounded-full"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <h4 class="font-bold text-lg">Applications</h4>
+                  <p class="text-purple-200 text-sm mt-1">Manage authorized software</p>
+                </div>
+
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <h4 class="font-bold text-lg">Cloud Access</h4>
+                  <p class="text-purple-200 text-sm mt-1">Secure service authentication</p>
+                </div>
+              </div>
+
+              <div class="bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-300/20 rounded-2xl p-5">
+                <h4 class="font-bold text-lg">Ecosystem Integration</h4>
+                <p class="text-purple-100 text-sm mt-2 leading-relaxed">
+                  Access software, services, applications, cloud systems, and organization tools from one secure identity portal.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="mt-32">
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-black">Built for the connected ecosystem</h2>
+        <p class="text-purple-200 mt-4 max-w-2xl mx-auto text-lg">
+          Unified authentication and secure account management across all connected services and organizations.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+
+        <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-md hover:-translate-y-2 transition-transform">
+          <div class="text-5xl mb-6">🎨</div>
+          <h3 class="text-2xl font-bold mb-4">Account Management</h3>
+          <p class="text-purple-200 leading-relaxed">
+            View account details, connected organizations, sessions, and authorized devices from one dashboard.
+          </p>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-md hover:-translate-y-2 transition-transform">
+          <div class="text-5xl mb-6">🔒</div>
+          <h3 class="text-2xl font-bold mb-4">Single Sign-On</h3>
+          <p class="text-purple-200 leading-relaxed">
+            Secure authentication for applications, cloud platforms, software tools, and internal services.
+          </p>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-[2rem] p-8 backdrop-blur-md hover:-translate-y-2 transition-transform">
+          <div class="text-5xl mb-6">🌐</div>
+          <h3 class="text-2xl font-bold mb-4">Cross-Organization Access</h3>
+          <p class="text-purple-200 leading-relaxed">
+            Integrated access across Plum, Femboy, Prism, and UBC connected systems and services.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="about" class="mt-32">
+      <div class="bg-white/5 border border-white/10 rounded-[2rem] p-12 backdrop-blur-md grid lg:grid-cols-2 gap-12 items-center">
+
+        <div>
+          <h2 class="text-5xl font-black leading-tight">
+            One account for everything.
+          </h2>
+
+          <p class="mt-6 text-purple-100 text-lg leading-relaxed">
+            Plum Identity acts as the primary authentication and authorization layer across the broader ecosystem. Manage applications, approve connected services, monitor account security, and access cloud tools from one centralized platform.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-white/10 rounded-3xl p-8">
+            <h3 class="text-4xl font-black">256-bit</h3>
+            <p class="text-purple-200 mt-2">Secure authentication systems</p>
+          </div>
+
+          <div class="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-white/10 rounded-3xl p-8">
+            <h3 class="text-4xl font-black">∞</h3>
+            <p class="text-purple-200 mt-2">Connected services & platforms</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="contact" class="mt-32 text-center">
+      <div class="bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-white/10 rounded-[2rem] p-16 backdrop-blur-md">
+
+        <h2 class="text-5xl font-black">Access your ecosystem securely</h2>
+
+        <p class="text-purple-100 text-lg mt-6 max-w-2xl mx-auto leading-relaxed">
+          Sign in once to securely access authorized applications, services, cloud systems, and organization tools across the ecosystem.
+        </p>
+
+        <div class="mt-10 flex justify-center gap-4 flex-wrap">
+          <button class="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold hover:scale-105 transition-transform shadow-2xl">
+            Open Portal
+          </button>
+
+          <button class="px-8 py-4 rounded-2xl border border-white/20 bg-white/5 hover:bg-white/10 transition">
+            Contact Team
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="relative z-10 px-8 py-8 border-t border-white/10 text-center text-purple-200 text-sm mt-24">
+    © 2026 Plum Identity. Unified authentication across the Plum ecosystem.
+  </footer>
+
+</body>
+</html>
