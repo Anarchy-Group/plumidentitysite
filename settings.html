@@ -138,33 +138,45 @@
     // SAVE PROFILE
     // ======================================
 
-    async function saveProfile() {
-      const status = document.getElementById('account-save-status');
+async function saveProfile() {
+  const status = document.getElementById('account-save-status');
 
-      status.innerText = 'Saving...';
+  status.innerText = 'Saving...';
 
-      const updates = {
-        display_name: document.getElementById('display-name-input').value,
-        organization: document.getElementById('organization-input').value,
-        two_factor_enabled: document.getElementById('two-factor-toggle').checked,
-        updated_at: new Date().toISOString()
-      };
+  const updates = {
+    id: currentUser.id,
 
-      const { error } = await supabaseClient
-        .from('user_profiles')
-        .update(updates)
-        .eq('id', currentUser.id);
+    display_name:
+      document.getElementById('display-name-input').value,
 
-      if (error) {
-        console.error(error);
-        status.innerText = 'Failed to save settings';
-        return;
-      }
+    organization:
+      document.getElementById('organization-input').value,
 
-      status.innerText = 'Settings saved successfully';
+    two_factor_enabled:
+      document.getElementById('two-factor-toggle').checked,
 
-      await loadProfile();
-    }
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabaseClient
+    .from('user_profiles')
+    .upsert(updates);
+
+  if (error) {
+    console.error(error);
+
+    status.innerText =
+      'Failed to save settings';
+
+    return;
+  }
+
+  status.innerText =
+    'Settings saved successfully';
+
+  await loadProfile();
+}
+
 
 
     // ======================================
